@@ -1,0 +1,44 @@
+#!/bin/bash
+
+which docker-compose &> /dev/null
+
+if [ $? -ne 0 ]; then
+    echo "LỖI: Vui lòng cài đặt docker-compose."
+    exit 1
+fi
+
+mkdir -p certs
+
+SYSTEM_IP_ADDRESSES=($(hostname -I))
+
+if [ -f certs/registry.crt ]; then
+    echo "THÔNG TIN: Có vẻ như hệ thống đã được deploy rồi!"
+    exit 0
+fi
+
+sed -i "s/subjectAltName=.*/subjectAltName=IP:${SYSTEM_IP_ADDRESSES[0]}/g" openssl.conf
+
+openssl req -newkey rsa:2048 -nodes -keyout certs/registry.key \
+    -x509 -sha256 -days 3650 -subj "/CN=docker-registry" \
+    -out certs/registry.crt -extensions san -config openssl.conf &> /dev/null
+
+if [ ! -f certs/registry.crt ]; then
+    echo "LỖI: Không thể tạo cặp certificate cho hệ thống docker registry."
+    exit 1
+else
+    echo "THÔNG TIN: Tạo cặp certificate cho hệ thống docker registry thành công."
+fi
+
+export JENKINS_DOCKER_REGISTRY_IP=${SYSTEM_IP_ADDRESSES[0]}
+
+docker-compose up -d
+
+echo "THÔNG TIN: Đã triển khai hệ thống thành công."
+
+echo "THÔNG TIN: Vui lòng chờ cho hệ thống khởi động."
+
+cat <<EOL
+Thông tin hệ thống:
+Jenkins URL: http://${SYSTEM_IP_ADDRESSES[0]}:8080
+Docker registry URL: https://$JENKINS_DOCKER_REGISTRY_IP
+EOL

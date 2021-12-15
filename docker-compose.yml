@@ -1,0 +1,51 @@
+version: !!str 3
+
+services:
+  jenkins:
+    image: ssbostan/jenkins:lts-slim
+    restart: unless-stopped
+    environment:
+      - "DOCKER_HOST=tcp://docker:2376"
+      - "DOCKER_TLS_VERIFY=1"
+      - "TZ=Asia/Ho_Chi_Minh"
+      - "JAVA_OPTS=-Duser.timezone=Asia/Ho_Chi_Minh"
+    volumes:
+      - "jenkins_data:/var/jenkins_home"
+      - "docker_certs_client:/var/jenkins_home/.docker"
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+
+  registry:
+    image: registry:2
+    restart: unless-stopped
+    environment:
+      - "REGISTRY_FIELDS_ENVIRONMENT=production"
+      - "REGISTRY_HTTP_ADDR=0.0.0.0:443"
+      - "REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry.crt"
+      - "REGISTRY_HTTP_TLS_KEY=/certs/registry.key"
+    volumes:
+      - "registry_data:/var/lib/registry"
+      - "./certs:/certs"
+    ports:
+      - "443:443"
+
+  docker:
+    image: docker:dind
+    restart: unless-stopped
+    privileged: true
+    command: ["--insecure-registry", "$JENKINS_DOCKER_REGISTRY_IP"]
+    volumes:
+      - "docker_data:/var/lib/docker"
+      - "docker_certs:/certs"
+      - "docker_certs_client:/certs/client"
+      - "jenkins_data:/var/jenkins_home"
+    expose:
+      - "2376"
+
+volumes:
+  jenkins_data:
+  registry_data:
+  docker_data:
+  docker_certs:
+  docker_certs_client:
