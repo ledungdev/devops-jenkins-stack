@@ -2,7 +2,7 @@ version: !!str 3
 
 services:
   jenkins:
-    image: ssbostan/jenkins:lts-slim
+    image: ledungdocker/jenkins:lts-slim
     restart: unless-stopped
     environment:
       - "DOCKER_HOST=tcp://docker:2376"
@@ -42,6 +42,12 @@ services:
       - "jenkins_data:/var/jenkins_home"
     expose:
       - "2376"
+
+  sonarqube:
+    image: sonarqube:latest
+    restart: unless-stopped
+    ports:
+    - "9000:9000"
 
 volumes:
   jenkins_data:
